@@ -10,7 +10,9 @@ HTML_CONTENT = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IT Dept - Daily Standup</title>
-    <script src="https://tailwindcss.com"></script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
         /* Custom animation for the slow rainbow glowing divider line */
         @keyframes rainbowGlow {
@@ -49,21 +51,17 @@ HTML_CONTENT = """
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 font-sans min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-500">
 
-    <!-- Theme Toggle Button: Positioned Top-Right on Desktop, Safe and Accessible on Mobile -->
     <div class="absolute top-4 right-4 sm:top-6 sm:right-6 z-50">
         <button id="theme-btn" onclick="toggleTheme()" class="bg-gray-800 border border-gray-700 rounded-full w-12 h-12 flex items-center justify-center shadow-md hover:bg-gray-700 transition duration-300">
             <span class="text-white text-xl">🌙</span>
         </button>
     </div>
 
-    <!-- Main Container Card -->
     <div class="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-colors duration-500 my-12">
         
-        <!-- Big Giant Rainbow Glowing Line (Remains constant in both modes) -->
         <div class="rainbow-line h-3.5 w-full"></div>
 
         <div class="p-6 sm:p-8">
-            <!-- Header -->
             <div class="flex items-center space-x-3 mb-6">
                 <span class="text-3xl">🚀</span>
                 <div>
@@ -72,9 +70,7 @@ HTML_CONTENT = """
                 </div>
             </div>
 
-            <!-- Form -->
             <form action="/submit" method="POST" class="space-y-5">
-                <!-- Employee Selection -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Your Name</label>
                     <select name="name" required class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition duration-300">
@@ -89,7 +85,6 @@ HTML_CONTENT = """
                     </select>
                 </div>
 
-                <!-- Role Selection -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Department Role</label>
                     <select name="role" required class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition duration-300">
@@ -103,13 +98,11 @@ HTML_CONTENT = """
                     </select>
                 </div>
 
-                <!-- Task Input -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">What did you achieve today?</label>
                     <textarea name="work_done" required rows="4" placeholder="List your tasks, bugs fixed, or assets created..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition duration-300"></textarea>
                 </div>
 
-                <!-- Submit Button -->
                 <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-950 font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-lg shadow-amber-500/10 hover:shadow-amber-500/20 transform active:scale-[0.98]">
                     Submit Update
                 </button>
