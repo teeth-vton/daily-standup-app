@@ -50,6 +50,16 @@ async def get_form(request: Request):
                     toast.classList.remove('translate-y-[-100%]', 'opacity-0');
                     setTimeout(() => toast.classList.add('translate-y-[-100%]', 'opacity-0'), 3000);
                 }}
+                
+                // NEW FEATURE: Enter to Submit from PC
+                const textArea = document.getElementById('work_done_input');
+                textArea.addEventListener('keydown', function(e) {{
+                    // If Enter is pressed WITHOUT the shift key
+                    if (e.key === 'Enter' && !e.shiftKey) {{
+                        e.preventDefault(); // Prevent new line
+                        document.getElementById('standup_form').submit(); // Submit form
+                    }}
+                }});
             }}
         </script>
         <style>
@@ -76,7 +86,7 @@ async def get_form(request: Request):
                     </div>
                 </div>
                 
-                <form action="/submit" method="POST" class="space-y-6">
+                <form id="standup_form" action="/submit" method="POST" class="space-y-6">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 ml-1">Your Name</label>
                         <select id="name-dropdown" name="name" onchange="autoSelectRole()" required class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 text-base text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm appearance-none cursor-pointer">
@@ -100,7 +110,7 @@ async def get_form(request: Request):
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 ml-1">What did you achieve today?</label>
-                        <textarea name="work_done" required rows="4" placeholder="Tasks, bugs fixed, assets created..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 text-base text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"></textarea>
+                        <textarea id="work_done_input" name="work_done" required rows="4" placeholder="Tasks, bugs fixed, assets created... (Press Enter to submit, Shift+Enter for new line)" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 text-base text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"></textarea>
                     </div>
                     <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-950 font-extrabold text-lg py-4 px-4 rounded-2xl transition duration-300 shadow-lg active:scale-95 mt-2">
                         Submit Update
@@ -149,6 +159,7 @@ async def get_dashboard():
     <html lang="en" class="dark">
     <head>
         <meta charset="UTF-8">
+        
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="mobile-web-app-capable" content="yes">
@@ -180,10 +191,14 @@ async def get_dashboard():
             }}
         </script>
         <style>
-            /* Custom scrollbar for mobile sleekness */
             ::-webkit-scrollbar {{ display: none; }}
-            /* Push content down slightly on iPhones with notches */
-            body {{ padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }}
+            /* Ensure content respects safe areas on modern phones */
+            body {{ 
+                padding-top: env(safe-area-inset-top); 
+                padding-bottom: env(safe-area-inset-bottom);
+                /* Prevent pull-to-refresh empty space */
+                overscroll-behavior-y: none;
+            }}
         </style>
     </head>
     <body class="bg-[#f2f2f7] dark:bg-black text-gray-900 dark:text-gray-100 font-sans min-h-[100dvh] pb-32">
@@ -205,7 +220,7 @@ async def get_dashboard():
             </div>
         </div>
 
-        <div class="fixed bottom-8 left-0 w-full px-4 z-50 mb-[env(safe-area-inset-bottom)]">
+        <div class="fixed bottom-6 left-0 w-full px-4 z-50 mb-[env(safe-area-inset-bottom)]">
             <button id="summary-btn" onclick="getSummary()" class="w-full bg-gray-900 dark:bg-amber-500 text-white dark:text-gray-950 py-4 rounded-2xl font-extrabold text-lg shadow-[0_10px_40px_rgba(245,158,11,0.3)] flex justify-center items-center gap-2 transition-transform active:scale-95">
                 ✨ Summarize
             </button>
