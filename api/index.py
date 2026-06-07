@@ -15,69 +15,37 @@ def get_ist_now():
 def get_ist_date():
     return get_ist_now().strftime("%B %d, %Y")
 
+# Shared HTML Header for Mobile "App" Experience
+PWA_HEADERS = """
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#111827">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
+"""
+
+# ==========================================
+# PAGE 1: THE TEAM SUBMISSION APP (Route: /)
+# ==========================================
 @app.get("/", response_class=HTMLResponse)
-async def get_home(request: Request):
-    # 1. Generate the WhatsApp Text automatically
-    whatsapp_text = f"🚀 *ADV Daily Summary - {get_ist_date()}*\n\n"
-    for sub in submissions_db:
-        whatsapp_text += f"*{sub['name']}* ({sub['role']}): {sub['work']}\n"
-    
-    # Optional: Link to the live board
-    whatsapp_text += f"\n📊 *Live Board:* {request.base_url}"
-    encoded_whatsapp = urllib.parse.quote(whatsapp_text)
-    whatsapp_link = f"https://wa.me/?text={encoded_whatsapp}"
-
-    # 2. Generate the Live Feed HTML
-    submissions_html = ""
-    if not submissions_db:
-        submissions_html = '<div class="text-center py-10 text-gray-500 dark:text-gray-400">No updates yet today. Be the first!</div>'
-    else:
-        # Reverse the list so the newest submission is at the top
-        for sub in reversed(submissions_db):
-            submissions_html += f"""
-            <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-3 hover:border-amber-500 transition duration-300">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="font-bold text-lg">{sub['name']} <span class="text-xs bg-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-md ml-2">{sub['role']}</span></h3>
-                    <span class="text-xs text-gray-500">{sub['time']}</span>
-                </div>
-                <p class="text-sm text-gray-700 dark:text-gray-300">{sub['work']}</p>
-            </div>
-            """
-
-    # 3. Build the Single Page Layout
+async def get_form():
     html_content = f"""
     <!DOCTYPE html>
     <html lang="en" class="dark">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ADV Dept - Daily Standup</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>ADV Submit</title>
+        {PWA_HEADERS}
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
             @keyframes rainbowGlow {{ 0% {{ background-position: 0% 50%; }} 50% {{ background-position: 100% 50%; }} 100% {{ background-position: 0% 50%; }} }}
             .rainbow-line {{ background: linear-gradient(90deg, #d4af37, #f39c12, #9b59b6, #3498db, #2ecc71, #d4af37); background-size: 400% 400%; animation: rainbowGlow 12s ease infinite; }}
-            .bg-adv-text {{ position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); font-size: clamp(8rem, 20vw, 24rem); font-weight: 900; letter-spacing: -0.5rem; white-space: nowrap; z-index: 0; pointer-events: none; background: linear-gradient(90deg, #d4af37, #f39c12, #9b59b6, #3498db, #2ecc71, #d4af37); background-size: 400% 400%; animation: rainbowGlow 12s ease infinite; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; opacity: 0.12; }}
-            body {{ position: relative; overflow-x: hidden; }}
-            /* Hide scrollbar for a cleaner look */
-            ::-webkit-scrollbar {{ width: 6px; }}
-            ::-webkit-scrollbar-track {{ background: transparent; }}
-            ::-webkit-scrollbar-thumb {{ background: #4b5563; border-radius: 10px; }}
+            .bg-adv-text {{ position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); font-size: clamp(8rem, 20vw, 24rem); font-weight: 900; letter-spacing: -0.5rem; white-space: nowrap; z-index: 0; pointer-events: none; background: linear-gradient(90deg, #d4af37, #f39c12, #9b59b6, #3498db, #2ecc71, #d4af37); background-size: 400% 400%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; opacity: 0.12; }}
+            body {{ position: relative; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }}
         </style>
         <script>
             tailwind.config = {{ darkMode: 'class' }}
-            function toggleTheme() {{
-                const html = document.documentElement;
-                const btn = document.getElementById('theme-btn');
-                if (html.classList.contains('dark')) {{
-                    html.classList.remove('dark');
-                    btn.innerHTML = '<span class="text-black text-xl">☀️</span>';
-                    btn.className = "bg-white border border-gray-300 rounded-full w-12 h-12 flex items-center justify-center shadow-md hover:bg-gray-100 transition duration-300";
-                }} else {{
-                    html.classList.add('dark');
-                    btn.innerHTML = '<span class="text-white text-xl">🌙</span>';
-                    btn.className = "bg-gray-800 border border-gray-700 rounded-full w-12 h-12 flex items-center justify-center shadow-md hover:bg-gray-700 transition duration-300";
-                }}
-            }}
             function autoSelectRole() {{
                 const nameDropdown = document.getElementById("name-dropdown");
                 const roleDropdown = document.getElementById("role-dropdown");
@@ -90,93 +58,21 @@ async def get_home(request: Request):
             }}
         </script>
     </head>
-    <body class="bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 font-sans min-h-screen p-4 transition-colors duration-500 flex justify-center">
-        
+    <body class="bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 font-sans min-h-screen p-4 flex justify-center items-center">
         <div class="bg-adv-text">ADV</div>
-
-        <div class="fixed top-4 right-4 z-50">
-            <button id="theme-btn" onclick="toggleTheme()" class="bg-gray-800 border border-gray-700 rounded-full w-12 h-12 flex items-center justify-center shadow-md hover:bg-gray-700 transition duration-300">
-                <span class="text-white text-xl">🌙</span>
-            </button>
-        </div>
-
-        <div class="relative z-10 w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 my-8 items-start">
-            
-            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden sticky top-8">
-                <div class="rainbow-line h-3 w-full"></div>
-                <div class="p-6 sm:p-8">
-                    <div class="flex items-center space-x-3 mb-6">
-                        <span class="text-3xl">🚀</span>
-                        <div>
-                            <h1 class="text-2xl font-bold tracking-tight">Daily Standup</h1>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Submit your ADV updates below</p>
-                        </div>
-                    </div>
-                    
-                    <form action="/submit" method="POST" class="space-y-5">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Your Name</label>
-                            <select id="name-dropdown" name="name" onchange="autoSelectRole()" required class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer">
-                                <option value="" disabled selected>Select your name</option>
-                                <option value="Nikhil">Nikhil</option> <option value="Pragg">Pragg</option>
-                                <option value="Yashpaal">Yashpaal</option> <option value="Aaniket">Aaniket</option>
-                                <option value="Bhaavin">Bhaavin</option> <option value="Manthan">Manthan</option>
-                                <option value="Sonic">Sonic</option> <option value="Jenish">Jenish</option>
-                                <option value="Dhiraj">Dhiraj</option> <option value="Saavan">Saavan</option>
-                                <option value="Dhruvit">Dhruvit</option> <option value="Karan">Karan</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Department Role</label>
-                            <select id="role-dropdown" name="role" required class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer">
-                                <option value="" disabled selected>Select your track</option>
-                                <option value="AI Developer">AI Developer</option> <option value="Coder">Coder</option>
-                                <option value="SEO">SEO</option> <option value="UX/UI">UX/UI</option>
-                                <option value="Video Editor">Video Editor</option> <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">What did you achieve today?</label>
-                            <textarea name="work_done" required rows="4" placeholder="List your tasks, bugs fixed, or assets created..." class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
-                        </div>
-                        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-950 font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-lg shadow-amber-500/10 hover:shadow-amber-500/20 transform active:scale-[0.98]">
-                            Submit Update
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="flex flex-col h-full">
-                <div class="flex justify-between items-end mb-6">
+        
+        <div class="relative z-10 w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden pb-4">
+            <div class="rainbow-line h-3 w-full"></div>
+            <div class="p-6">
+                <div class="flex items-center space-x-3 mb-6">
+                    <span class="text-4xl">🚀</span>
                     <div>
-                        <h2 class="text-2xl font-bold tracking-tight">Today's Logs</h2>
-                        <p class="text-gray-500 dark:text-gray-400">{get_ist_date()}</p>
+                        <h1 class="text-2xl font-bold tracking-tight">Daily Standup</h1>
+                        <p class="text-xs text-gray-500">Tap to submit your ADV updates</p>
                     </div>
-                    
-                    <a href="{whatsapp_link}" target="_blank" class="flex items-center space-x-2 bg-[#25D366] hover:bg-[#1ebd59] text-white font-bold py-2.5 px-5 rounded-xl shadow-lg transition duration-300 transform hover:scale-105">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 3.825 0 6.938 3.112 6.938 6.937s-3.113 6.938-6.938 6.938z"/></svg>
-                        <span class="text-sm">Send to Boss</span>
-                    </a>
                 </div>
                 
-                <div class="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-6 overflow-y-auto max-h-[70vh]">
-                    {submissions_html}
-                </div>
-            </div>
-
-        </div>
-    </body>
-    </html>
-    """
-    return html_content
-
-@app.post("/submit")
-async def handle_submit(name: str = Form(...), role: str = Form(...), work_done: str = Form(...)):
-    # Save the new data, then immediately refresh the page to show it in the feed
-    submissions_db.append({
-        "name": name,
-        "role": role,
-        "work": work_done,
-        "time": get_ist_now().strftime("%I:%M %p")
-    })
-    return RedirectResponse(url="/", status_code=303)
+                <form action="/submit" method="POST" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Your Name</label>
+                        <select id="name-dropdown" name="name" onchange="autoSelectRole()" required class="
