@@ -1,21 +1,23 @@
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 import urllib.parse
-from datetime import datetime
-import pytz
+from datetime import datetime, timezone, timedelta
 
 app = FastAPI()
 
 # Temporary in-memory database to hold today's work
-# (We will upgrade this to a real database later so it saves forever)
 submissions_db = []
 
+def get_ist_now():
+    # Native Python calculation for IST (UTC + 5 hours 30 mins)
+    ist_tz = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(ist_tz)
+
 def get_ist_date():
-    ist = pytz.timezone('Asia/Kolkata')
-    return datetime.now(ist).strftime("%B %d, %Y")
+    return get_ist_now().strftime("%B %d, %Y")
 
 # ==========================================
-# PAGE 1: THE SUBMISSION FORM (Manager Removed)
+# PAGE 1: THE SUBMISSION FORM 
 # ==========================================
 @app.get("/", response_class=HTMLResponse)
 async def get_form():
@@ -119,14 +121,13 @@ async def get_form():
 # ==========================================
 @app.post("/submit")
 async def handle_submit(name: str = Form(...), role: str = Form(...), work_done: str = Form(...)):
-    # Save to our temporary database
+    # Save to our temporary database with native IST Time
     submissions_db.append({
         "name": name,
         "role": role,
         "work": work_done,
-        "time": datetime.now().strftime("%I:%M %p")
+        "time": get_ist_now().strftime("%I:%M %p")
     })
-    # After submitting, immediately send them back to the empty form for the next person
     return RedirectResponse(url="/", status_code=303)
 
 # ==========================================
@@ -134,20 +135,16 @@ async def handle_submit(name: str = Form(...), role: str = Form(...), work_done:
 # ==========================================
 @app.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard(request: Request):
-    # 1. Generate the raw text for WhatsApp
     whatsapp_text = f"🚀 *ADV Daily Summary - {get_ist_date()}*\n\n"
     for sub in submissions_db:
         whatsapp_text += f"*{sub['name']}* ({sub['role']}): {sub['work']}\n"
     
-    # Add the link to this exact dashboard so the boss can view it on the web
     dashboard_url = str(request.base_url) + "dashboard"
     whatsapp_text += f"\n📊 *View full details here:* {dashboard_url}"
     
-    # 2. Encode the text so it works in a URL
     encoded_whatsapp = urllib.parse.quote(whatsapp_text)
     whatsapp_link = f"https://wa.me/?text={encoded_whatsapp}"
 
-    # 3. Generate HTML for the submissions list
     submissions_html = ""
     if not submissions_db:
         submissions_html = '<p class="text-gray-500 text-center py-8">No updates submitted today yet.</p>'
@@ -185,7 +182,6 @@ async def get_dashboard(request: Request):
                     <p class="text-gray-500">{get_ist_date()}</p>
                 </div>
                 
-                <!-- THE WHATSAPP TRIGGER BUTTON -->
                 <a href="{whatsapp_link}" target="_blank" class="flex items-center space-x-2 bg-[#25D366] hover:bg-[#1ebd59] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 transform hover:scale-105">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 3.825 0 6.938 3.112 6.938 6.937s-3.113 6.938-6.938 6.938z"/></svg>
                     <span>Send Daily Summary</span>
