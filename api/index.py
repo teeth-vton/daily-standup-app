@@ -25,6 +25,13 @@ async def get_form(request: Request):
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+        
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="ADV Submit">
+        <meta name="theme-color" content="#111827">
+
         <title>ADV - Submit Work</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
@@ -46,7 +53,6 @@ async def get_form(request: Request):
             }}
         </script>
         <style>
-            /* Secured background text so it never breaks mobile screen width */
             .bg-adv-wrapper {{ position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }}
             .bg-adv-text {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); font-size: clamp(8rem, 25vw, 24rem); font-weight: 900; letter-spacing: -0.5rem; white-space: nowrap; background: linear-gradient(90deg, #d4af37, #f39c12, #9b59b6, #3498db, #2ecc71, #d4af37); background-size: 400% 400%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; opacity: 0.1; }}
         </style>
@@ -143,7 +149,13 @@ async def get_dashboard():
     <html lang="en" class="dark">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="ADV Logs">
+        <meta name="theme-color" content="#000000">
+
         <title>ADV Boss App</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
@@ -154,7 +166,6 @@ async def get_dashboard():
                 const box = document.getElementById('summary-box');
                 const content = document.getElementById('summary-content');
                 
-                // Haptic feedback simulation & loading state
                 if (navigator.vibrate) navigator.vibrate(50);
                 btn.innerHTML = "⏳ Summarizing...";
                 box.classList.remove('hidden');
@@ -171,6 +182,8 @@ async def get_dashboard():
         <style>
             /* Custom scrollbar for mobile sleekness */
             ::-webkit-scrollbar {{ display: none; }}
+            /* Push content down slightly on iPhones with notches */
+            body {{ padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }}
         </style>
     </head>
     <body class="bg-[#f2f2f7] dark:bg-black text-gray-900 dark:text-gray-100 font-sans min-h-[100dvh] pb-32">
@@ -192,7 +205,7 @@ async def get_dashboard():
             </div>
         </div>
 
-        <div class="fixed bottom-6 left-0 w-full px-4 z-50">
+        <div class="fixed bottom-8 left-0 w-full px-4 z-50 mb-[env(safe-area-inset-bottom)]">
             <button id="summary-btn" onclick="getSummary()" class="w-full bg-gray-900 dark:bg-amber-500 text-white dark:text-gray-950 py-4 rounded-2xl font-extrabold text-lg shadow-[0_10px_40px_rgba(245,158,11,0.3)] flex justify-center items-center gap-2 transition-transform active:scale-95">
                 ✨ Summarize
             </button>
