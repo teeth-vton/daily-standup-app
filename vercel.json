@@ -1,5 +1,6 @@
 {
-  "rewrites": [
+  "routes": [
+    { "source": "/favicon.ico", "status": 204 },
     { "source": "/(.*)", "destination": "/api/index.py" }
   ]
 }
