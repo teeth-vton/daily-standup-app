@@ -17,11 +17,24 @@ def get_ist_now():
 def get_ist_date():
     return get_ist_now().strftime("%B %d, %Y")
 
+# Track the current active month for the auto-reset feature
+current_active_month = get_ist_now().month
+
+def check_monthly_reset():
+    """Automatically clears the database if a new month has started in India Standard Time."""
+    global current_active_month, submissions_db
+    now_month = get_ist_now().month
+    if now_month != current_active_month:
+        submissions_db.clear()
+        current_active_month = now_month
+
 # ==========================================
 # PAGE 1: THE TEAM SUBMISSION FORM (/)
 # ==========================================
 @app.get("/", response_class=HTMLResponse)
 async def get_form(request: Request):
+    check_monthly_reset() # Check for reset when page loads
+    
     html_content = f"""
     <!DOCTYPE html>
     <html lang="en" class="dark">
@@ -169,10 +182,14 @@ async def get_form(request: Request):
 
 @app.post("/submit")
 async def handle_submit(name: str = Form(...), role: str = Form(...), work_done: str = Form(...)):
+    check_monthly_reset() # Ensure reset logic fires before appending
+    
+    # Store the actual date the work was submitted so the dashboard groups it accurately over the month
     submissions_db.append({
         "name": name,
         "role": role,
         "work": work_done,
+        "date_string": get_ist_date(),
         "time": get_ist_now().strftime("%I:%M %p")
     })
     return RedirectResponse(url="/?success=true", status_code=303)
@@ -183,16 +200,19 @@ async def handle_submit(name: str = Form(...), role: str = Form(...), work_done:
 # ==========================================
 @app.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard():
+    check_monthly_reset() # Check for reset when page loads
+    
     submissions_html = ""
     if not submissions_db:
-        submissions_html = '<div class="flex flex-col items-center justify-center py-20 text-gray-500"><span class="text-4xl mb-3">📭</span><p>No updates yet today.</p></div>'
+        submissions_html = '<div class="flex flex-col items-center justify-center py-20 text-gray-500"><span class="text-4xl mb-3">📭</span><p>No updates this month.</p></div>'
     else:
+        # Loop through submissions to show everything submitted this month
         for sub in reversed(submissions_db):
             submissions_html += f"""
             <div class="p-5 bg-white dark:bg-gray-800/80 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/50 mb-4 backdrop-blur-sm">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="font-bold text-[17px]">{sub['name']} <span class="text-xs font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-lg ml-1">{sub['role']}</span></h3>
-                    <span class="text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded-lg">{sub['time']}</span>
+                    <span class="text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded-lg">{sub.get('date_string', '')} - {sub['time']}</span>
                 </div>
                 <p class="text-[15px] text-gray-700 dark:text-gray-300 leading-relaxed">{sub['work']}</p>
             </div>
@@ -224,7 +244,7 @@ async def get_dashboard():
                 if (navigator.vibrate) navigator.vibrate(50);
                 btn.innerHTML = "⏳ Summarizing...";
                 box.classList.remove('hidden');
-                content.innerHTML = "<p class='text-gray-500 italic flex items-center gap-2'><svg class='animate-spin h-4 w-4' viewBox='0 0 24 24'><circle class='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' stroke-width='4' fill='none'></circle><path class='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path></svg> AI is reading today's logs...</p>";
+                content.innerHTML = "<p class='text-gray-500 italic flex items-center gap-2'><svg class='animate-spin h-4 w-4' viewBox='0 0 24 24'><circle class='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' stroke-width='4' fill='none'></circle><path class='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path></svg> AI is reading logs...</p>";
                 
                 const response = await fetch('/api/summarize');
                 const data = await response.json();
@@ -234,16 +254,12 @@ async def get_dashboard():
                 window.scrollTo({{top: 0, behavior: 'smooth'}});
             }}
 
-            // ==========================================
-            // SARVAM AI STRICT VOICE ASSISTANT (No Browser Robot Fallback)
-            // ==========================================
             async function activateVoiceAssistant() {{
                 const voiceBtn = document.getElementById('voice-assistant-btn');
                 const originalIcon = voiceBtn.innerHTML;
                 
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
                 
-                // Show loading animation
                 voiceBtn.innerHTML = "⏳";
                 voiceBtn.classList.add("animate-pulse");
 
@@ -266,8 +282,7 @@ async def get_dashboard():
                             voiceBtn.classList.remove("animate-pulse");
                         }});
                     }} else {{
-                        // STRICT FAILURE: If API keys are dead, just show a warning icon. No robot voices!
-                        console.error("Sarvam API failed. Alerting user to read text.");
+                        console.error("Sarvam API failed.");
                         voiceBtn.innerHTML = "⚠️";
                         voiceBtn.classList.remove("animate-pulse");
                         alert("Voice API credits expired! Please tap 'Summarize' to read the updates below.");
@@ -295,8 +310,8 @@ async def get_dashboard():
         
         <div class="bg-white/80 dark:bg-black/80 backdrop-blur-xl sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 p-4 pt-6 shadow-sm flex justify-between items-center">
             <div>
-                <h1 class="text-3xl font-extrabold tracking-tight">Daily Logs</h1>
-                <p class="text-sm text-gray-500 font-medium mt-1">{get_ist_date()}</p>
+                <h1 class="text-3xl font-extrabold tracking-tight">Monthly Logs</h1>
+                <p class="text-sm text-gray-500 font-medium mt-1">Resetting automatically next month</p>
             </div>
             
             <button id="voice-assistant-btn" onclick="activateVoiceAssistant()" class="bg-gray-100 dark:bg-gray-800 text-2xl h-12 w-12 rounded-full shadow-inner border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
@@ -329,23 +344,24 @@ async def get_dashboard():
 
 
 # ==========================================
-# API ROUTE: THE FAST LLM SUMMARIZER (Text for screen)
+# API ROUTE: THE FAST LLM SUMMARIZER
 # ==========================================
 @app.get("/api/summarize")
 async def summarize_logs():
+    check_monthly_reset()
     if not submissions_db:
-        return {"summary": "No tasks submitted today yet. The team is resting!"}
+        return {"summary": "No tasks submitted this month yet!"}
     
     roles = set([sub['role'] for sub in submissions_db])
     total_people = len(set([sub['name'] for sub in submissions_db]))
     
-    summary_html = f"<p class='font-medium'><strong>High-Level:</strong> {total_people} team members submitted updates across {len(roles)} departments.</p><ul class='list-disc pl-5 mt-3 space-y-2'>"
+    summary_html = f"<p class='font-medium'><strong>High-Level:</strong> {total_people} team members have submitted updates across {len(roles)} departments this month.</p><ul class='list-disc pl-5 mt-3 space-y-2'>"
     
     for role in roles:
-        names_in_role = [sub['name'] for sub in submissions_db if sub['role'] == role]
+        names_in_role = list(set([sub['name'] for sub in submissions_db if sub['role'] == role]))
         tasks_in_role = [sub['work'] for sub in submissions_db if sub['role'] == role]
         name_str = ", ".join(names_in_role)
-        preview = tasks_in_role[0][:45] + "..." if len(tasks_in_role[0]) > 45 else tasks_in_role[0]
+        preview = tasks_in_role[-1][:45] + "..." if len(tasks_in_role[-1]) > 45 else tasks_in_role[-1]
         
         summary_html += f"<li><strong>{role} ({name_str}):</strong> <em>'{preview}'</em></li>"
     
@@ -355,20 +371,27 @@ async def summarize_logs():
 
 
 # ==========================================
-# API ROUTE: SARVAM AI TTS CONNECTION (Single Key)
+# API ROUTE: SARVAM AI TTS CONNECTION
 # ==========================================
 @app.get("/api/voice_summary_audio")
 async def voice_summary_audio():
-    # 1. Generate the natural Gujarati Text
-    if not submissions_db:
-        gujarati_text = "હજી સુધી કોઈએ કામ જમા કરાવ્યું નથી." 
-    else:
-        names = [sub['name'] for sub in submissions_db]
-        unique_names = list(set(names))
-        names_str = ", ".join(unique_names)
-        gujarati_text = f"આજે {len(unique_names)} લોકોએ કામ જમા કરાવ્યું છે. તેમના નામ છે: {names_str}. બધું બરાબર ચાલી રહ્યું છે."
+    check_monthly_reset()
     
-    # 2. Package it perfectly for Sarvam AI
+    if not submissions_db:
+        gujarati_text = "આ મહિને હજી સુધી કોઈએ કામ જમા કરાવ્યું નથી." 
+    else:
+        # Isolate just today's updates for the voice summary so it doesn't get overwhelmingly long
+        today_date = get_ist_date()
+        todays_subs = [sub for sub in submissions_db if sub.get('date_string') == today_date]
+        
+        if not todays_subs:
+            gujarati_text = "આજે હજી સુધી કોઈએ કામ જમા કરાવ્યું નથી."
+        else:
+            names = [sub['name'] for sub in todays_subs]
+            unique_names = list(set(names))
+            names_str = ", ".join(unique_names)
+            gujarati_text = f"આજે {len(unique_names)} લોકોએ કામ જમા કરાવ્યું છે. તેમના નામ છે: {names_str}. બધું બરાબર ચાલી રહ્યું છે."
+    
     url = "https://api.sarvam.ai/text-to-speech"
     payload = {
         "text": gujarati_text,
@@ -377,7 +400,6 @@ async def voice_summary_audio():
         "speaker": "ritu" 
     }
     
-    # JUST YOUR SINGLE ACTIVE KEY
     headers = {
         "api-subscription-key": "sk_nd2k6k0b_p8DCLdeklhTnkQyXjLbhXMsx",
         "Content-Type": "application/json"
@@ -386,11 +408,9 @@ async def voice_summary_audio():
     req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
     
     try:
-        # BUMPED TIMEOUT TO 8 SECONDS so it doesn't accidentally kill a successful generation!
         with urllib.request.urlopen(req, timeout=8.0) as response:
             response_data = json.loads(response.read().decode('utf-8'))
             audio_base64 = response_data.get("audios", [""])[0]
-            
             return {"status": "success", "audio_base64": audio_base64}
             
     except Exception as e:
