@@ -355,7 +355,7 @@ async def summarize_logs():
 
 
 # ==========================================
-# NEW API ROUTE: SARVAM AI TTS CONNECTION
+# API ROUTE: SARVAM AI TTS CONNECTION (With Auto-Rotation)
 # ==========================================
 @app.get("/api/voice_summary_audio")
 async def voice_summary_audio():
@@ -374,26 +374,38 @@ async def voice_summary_audio():
         "text": gujarati_text,
         "target_language_code": "gu-IN",
         "model": "bulbul:v3",
-        "speaker": "ritu" # We are using Ritu's voice, a crystal clear female Indian voice model
+        "speaker": "ritu" 
     }
     
-    headers = {
-        "api-subscription-key": "sk_7gnr0k5o_pMJQHwfDM99E0TFiAOPtB0I5",
-        "Content-Type": "application/json"
-    }
+    # 3. HIGH-SPEED ROTATION ARRAY
+    # Add as many keys as you want here. The system will try them top to bottom.
+    api_keys = [
+        "sk_7gnr0k5o_pMJQHwfDM99E0TFiAOPtB0I5",
+        "sk_nd2k6k0b_p8DCLdeklhTnkQyXjLbhXMsx"
+    ]
     
-    req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
-    
-    try:
-        # 3. Fire to Sarvam and decode the Base64 audio return
-        with urllib.request.urlopen(req) as response:
-            response_data = json.loads(response.read().decode('utf-8'))
-            audio_base64 = response_data.get("audios", [""])[0]
-            
-            # Send the raw audio string directly to the boss's phone!
-            return {"status": "success", "audio_base64": audio_base64}
-            
-    except Exception as e:
-        print("Sarvam API Error:", e)
-        # Safe fallback in case the API rate limits or network drops
-        return {"status": "error", "text": gujarati_text}
+    for key in api_keys:
+        headers = {
+            "api-subscription-key": key,
+            "Content-Type": "application/json"
+        }
+        
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
+        
+        try:
+            # STRICT TIMEOUT: If the API takes more than 3.0 seconds, kill it and move to the next key instantly.
+            with urllib.request.urlopen(req, timeout=3.0) as response:
+                response_data = json.loads(response.read().decode('utf-8'))
+                audio_base64 = response_data.get("audios", [""])[0]
+                
+                # If we got audio, return it immediately and break the loop
+                return {"status": "success", "audio_base64": audio_base64}
+                
+        except Exception as e:
+            # If out of credits, rate-limited, or timed out > 3 seconds, catch the error and loop to the next key.
+            print(f"Key {key[:10]}... failed: {e}")
+            continue 
+
+    # 4. SAFETY FALLBACK: Only triggers if EVERY key in the array is dead.
+    print("All Sarvam API keys failed or timed out.")
+    return {"status": "error", "text": gujarati_text}
