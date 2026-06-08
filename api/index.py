@@ -51,15 +51,56 @@ async def get_form(request: Request):
                     setTimeout(() => toast.classList.add('translate-y-[-100%]', 'opacity-0'), 3000);
                 }}
                 
-                // NEW FEATURE: Enter to Submit from PC
                 const textArea = document.getElementById('work_done_input');
                 textArea.addEventListener('keydown', function(e) {{
-                    // If Enter is pressed WITHOUT the shift key
                     if (e.key === 'Enter' && !e.shiftKey) {{
-                        e.preventDefault(); // Prevent new line
-                        document.getElementById('standup_form').submit(); // Submit form
+                        e.preventDefault(); 
+                        document.getElementById('standup_form').submit(); 
                     }}
                 }});
+            }}
+
+            // ==========================================
+            // VOICE ASSISTANT: SPEECH TO TEXT (Team Form)
+            // ==========================================
+            function startDictation() {{
+                if (window.hasOwnProperty('webkitSpeechRecognition') || window.hasOwnProperty('SpeechRecognition')) {{
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    const recognition = new SpeechRecognition();
+                    
+                    // Configured to understand native Gujarati perfectly
+                    recognition.lang = 'gu-IN'; 
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+
+                    const micBtn = document.getElementById('mic-btn');
+                    const textArea = document.getElementById('work_done_input');
+                    const originalIcon = micBtn.innerHTML;
+
+                    recognition.onstart = function() {{
+                        micBtn.innerHTML = "🔴"; // Show recording status
+                        micBtn.classList.add("animate-pulse");
+                    }};
+
+                    recognition.onresult = function(e) {{
+                        const transcript = e.results[0][0].transcript;
+                        // Add a space if there's already text, then append the Gujarati voice text
+                        textArea.value += (textArea.value.length > 0 ? " " : "") + transcript;
+                    }};
+
+                    recognition.onerror = function(e) {{
+                        console.error("Voice recognition error:", e.error);
+                    }};
+
+                    recognition.onend = function() {{
+                        micBtn.innerHTML = originalIcon;
+                        micBtn.classList.remove("animate-pulse");
+                    }};
+
+                    recognition.start();
+                }} else {{
+                    alert("Sorry, your browser does not support Voice Dictation. Try Chrome or Edge.");
+                }}
             }}
         </script>
         <style>
@@ -110,7 +151,14 @@ async def get_form(request: Request):
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 ml-1">What did you achieve today?</label>
-                        <textarea id="work_done_input" name="work_done" required rows="4" placeholder="Tasks, bugs fixed, assets created... (Press Enter to submit, Shift+Enter for new line)" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 text-base text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"></textarea>
+                        
+                        <div class="relative w-full">
+                            <textarea id="work_done_input" name="work_done" required rows="4" placeholder="Tasks, bugs fixed, assets created... (Press Enter to submit)" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 pr-12 text-base text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"></textarea>
+                            
+                            <button type="button" id="mic-btn" onclick="startDictation()" class="absolute bottom-3 right-3 text-2xl hover:scale-110 transition-transform bg-white dark:bg-gray-700 rounded-full h-10 w-10 flex items-center justify-center shadow-md border border-gray-200 dark:border-gray-600">
+                                🎤
+                            </button>
+                        </div>
                     </div>
                     <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-950 font-extrabold text-lg py-4 px-4 rounded-2xl transition duration-300 shadow-lg active:scale-95 mt-2">
                         Submit Update
@@ -189,23 +237,58 @@ async def get_dashboard():
                 btn.innerHTML = "✨ Summarize Again";
                 window.scrollTo({{top: 0, behavior: 'smooth'}});
             }}
+
+            // ==========================================
+            // BOSS VOICE ASSISTANT (Gujarati Text-to-Speech)
+            // ==========================================
+            async function activateVoiceAssistant() {{
+                const voiceBtn = document.getElementById('voice-assistant-btn');
+                const originalIcon = voiceBtn.innerHTML;
+                
+                if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+                voiceBtn.innerHTML = "🔊";
+                voiceBtn.classList.add("animate-pulse");
+
+                // Fetch the clean Gujarati text from the backend
+                const response = await fetch('/api/voice_summary');
+                const data = await response.json();
+
+                // Browser Native Text-to-Speech configured for Gujarati
+                const synth = window.speechSynthesis;
+                const utterance = new SpeechSynthesisUtterance(data.text);
+                
+                utterance.lang = 'gu-IN'; // Speak in Gujarati!
+                utterance.rate = 0.9;     // Slightly slower for clarity
+                utterance.pitch = 1.0;
+
+                utterance.onend = function() {{
+                    voiceBtn.innerHTML = originalIcon;
+                    voiceBtn.classList.remove("animate-pulse");
+                }};
+
+                synth.speak(utterance);
+            }}
         </script>
         <style>
             ::-webkit-scrollbar {{ display: none; }}
-            /* Ensure content respects safe areas on modern phones */
             body {{ 
                 padding-top: env(safe-area-inset-top); 
                 padding-bottom: env(safe-area-inset-bottom);
-                /* Prevent pull-to-refresh empty space */
                 overscroll-behavior-y: none;
             }}
         </style>
     </head>
-    <body class="bg-[#f2f2f7] dark:bg-black text-gray-900 dark:text-gray-100 font-sans min-h-[100dvh] pb-32">
+    <body class="bg-[#f2f2f7] dark:bg-black text-gray-900 dark:text-gray-100 font-sans min-h-[100dvh] pb-32 relative">
         
-        <div class="bg-white/80 dark:bg-black/80 backdrop-blur-xl sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 p-4 pt-6 shadow-sm">
-            <h1 class="text-3xl font-extrabold tracking-tight">Daily Logs</h1>
-            <p class="text-sm text-gray-500 font-medium mt-1">{get_ist_date()}</p>
+        <div class="bg-white/80 dark:bg-black/80 backdrop-blur-xl sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 p-4 pt-6 shadow-sm flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight">Daily Logs</h1>
+                <p class="text-sm text-gray-500 font-medium mt-1">{get_ist_date()}</p>
+            </div>
+            
+            <button id="voice-assistant-btn" onclick="activateVoiceAssistant()" class="bg-gray-100 dark:bg-gray-800 text-2xl h-12 w-12 rounded-full shadow-inner border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                🎙️
+            </button>
         </div>
 
         <div class="p-4 max-w-lg mx-auto">
@@ -233,7 +316,7 @@ async def get_dashboard():
 
 
 # ==========================================
-# API ROUTE: THE FAST LLM SUMMARIZER
+# API ROUTE: THE FAST LLM SUMMARIZER (Text for screen)
 # ==========================================
 @app.get("/api/summarize")
 async def summarize_logs():
@@ -256,3 +339,22 @@ async def summarize_logs():
     summary_html += "</ul><div class='mt-4 pt-3 border-t border-amber-200 dark:border-gray-800 font-bold text-green-600 dark:text-green-500'>✅ All operations looking good!</div>"
 
     return {"summary": summary_html}
+
+
+# ==========================================
+# NEW API ROUTE: GUJARATI VOICE ASSISTANT TEXT
+# ==========================================
+@app.get("/api/voice_summary")
+async def voice_summary():
+    # This route specifically generates plain Gujarati text for the browser to read out loud
+    if not submissions_db:
+        return {"text": "હજી સુધી કોઈએ કામ જમા કરાવ્યું નથી."} 
+    
+    names = [sub['name'] for sub in submissions_db]
+    unique_names = list(set(names))
+    names_str = ", ".join(unique_names)
+    
+    # "Today X people submitted work. Their names are: [names]. Everything is running well."
+    gujarati_text = f"આજે {len(unique_names)} લોકોએ કામ જમા કરાવ્યું છે. તેમના નામ છે: {names_str}. બધું બરાબર ચાલી રહ્યું છે."
+    
+    return {"text": gujarati_text}
