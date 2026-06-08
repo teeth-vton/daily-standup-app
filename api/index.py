@@ -33,7 +33,7 @@ def check_monthly_reset():
 # ==========================================
 @app.get("/", response_class=HTMLResponse)
 async def get_form(request: Request):
-    check_monthly_reset() # Check for reset when page loads
+    check_monthly_reset() 
     
     html_content = f"""
     <!DOCTYPE html>
@@ -182,9 +182,8 @@ async def get_form(request: Request):
 
 @app.post("/submit")
 async def handle_submit(name: str = Form(...), role: str = Form(...), work_done: str = Form(...)):
-    check_monthly_reset() # Ensure reset logic fires before appending
+    check_monthly_reset() 
     
-    # Store the actual date the work was submitted so the dashboard groups it accurately over the month
     submissions_db.append({
         "name": name,
         "role": role,
@@ -200,16 +199,19 @@ async def handle_submit(name: str = Form(...), role: str = Form(...), work_done:
 # ==========================================
 @app.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard():
-    check_monthly_reset() # Check for reset when page loads
+    check_monthly_reset() 
     
     submissions_html = ""
     if not submissions_db:
         submissions_html = '<div class="flex flex-col items-center justify-center py-20 text-gray-500"><span class="text-4xl mb-3">📭</span><p>No updates this month.</p></div>'
     else:
-        # Loop through submissions to show everything submitted this month
         for sub in reversed(submissions_db):
+            # Safe strings for the data attributes so search works flawlessly
+            safe_name = sub['name'].lower().replace('"', '&quot;')
+            safe_date = sub.get('date_string', '').lower().replace('"', '&quot;')
+            
             submissions_html += f"""
-            <div class="p-5 bg-white dark:bg-gray-800/80 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/50 mb-4 backdrop-blur-sm">
+            <div class="submission-card p-5 bg-white dark:bg-gray-800/80 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/50 mb-4 backdrop-blur-sm transition-opacity duration-200" data-name="{safe_name}" data-date="{safe_date}">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="font-bold text-[17px]">{sub['name']} <span class="text-xs font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-lg ml-1">{sub['role']}</span></h3>
                     <span class="text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded-lg">{sub.get('date_string', '')} - {sub['time']}</span>
@@ -236,6 +238,27 @@ async def get_dashboard():
         <script>
             tailwind.config = {{ darkMode: 'class' }}
             
+            // ==========================================
+            // INSTANT LOG FILTER (Search by Name or Date)
+            // ==========================================
+            function filterLogs() {{
+                const nameQuery = document.getElementById('search-name').value.toLowerCase();
+                const dateQuery = document.getElementById('search-date').value.toLowerCase();
+                const cards = document.querySelectorAll('.submission-card');
+                
+                cards.forEach(card => {{
+                    const cardName = card.getAttribute('data-name');
+                    const cardDate = card.getAttribute('data-date');
+                    
+                    // Show card if it matches BOTH the typed name and the typed date
+                    if (cardName.includes(nameQuery) && cardDate.includes(dateQuery)) {{
+                        card.style.display = 'block';
+                    }} else {{
+                        card.style.display = 'none';
+                    }}
+                }});
+            }}
+
             async function getSummary() {{
                 const btn = document.getElementById('summary-btn');
                 const box = document.getElementById('summary-box');
@@ -326,6 +349,17 @@ async def get_dashboard():
                 <div id="summary-content" class="text-[15px] text-gray-800 dark:text-gray-200 leading-relaxed space-y-3"></div>
             </div>
 
+            <div class="mb-5 flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-1">
+                    <span class="absolute left-3.5 top-3.5 text-gray-400">🔍</span>
+                    <input type="text" id="search-name" onkeyup="filterLogs()" placeholder="Search Name..." class="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl pl-11 pr-4 py-3.5 text-base text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm transition-colors">
+                </div>
+                <div class="relative flex-1">
+                    <span class="absolute left-3.5 top-3.5 text-gray-400">📅</span>
+                    <input type="text" id="search-date" onkeyup="filterLogs()" placeholder="e.g. June 8" class="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl pl-11 pr-4 py-3.5 text-base text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm transition-colors">
+                </div>
+            </div>
+
             <div class="mt-2 space-y-4">
                 {submissions_html}
             </div>
@@ -380,7 +414,6 @@ async def voice_summary_audio():
     if not submissions_db:
         gujarati_text = "આ મહિને હજી સુધી કોઈએ કામ જમા કરાવ્યું નથી." 
     else:
-        # Isolate just today's updates for the voice summary so it doesn't get overwhelmingly long
         today_date = get_ist_date()
         todays_subs = [sub for sub in submissions_db if sub.get('date_string') == today_date]
         
