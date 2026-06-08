@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from datetime import datetime, timezone, timedelta
+import urllib.parse
 
 app = FastAPI()
 
@@ -60,15 +61,12 @@ async def get_form(request: Request):
                 }});
             }}
 
-            // ==========================================
-            // VOICE ASSISTANT: SPEECH TO TEXT (Team Form)
-            // ==========================================
+            // VOICE ASSISTANT: SPEECH TO TEXT
             function startDictation() {{
                 if (window.hasOwnProperty('webkitSpeechRecognition') || window.hasOwnProperty('SpeechRecognition')) {{
                     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                     const recognition = new SpeechRecognition();
                     
-                    // Configured to understand native Gujarati perfectly
                     recognition.lang = 'gu-IN'; 
                     recognition.continuous = false;
                     recognition.interimResults = false;
@@ -78,13 +76,12 @@ async def get_form(request: Request):
                     const originalIcon = micBtn.innerHTML;
 
                     recognition.onstart = function() {{
-                        micBtn.innerHTML = "🔴"; // Show recording status
+                        micBtn.innerHTML = "🔴"; 
                         micBtn.classList.add("animate-pulse");
                     }};
 
                     recognition.onresult = function(e) {{
                         const transcript = e.results[0][0].transcript;
-                        // Add a space if there's already text, then append the Gujarati voice text
                         textArea.value += (textArea.value.length > 0 ? " " : "") + transcript;
                     }};
 
@@ -151,10 +148,8 @@ async def get_form(request: Request):
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 ml-1">What did you achieve today?</label>
-                        
                         <div class="relative w-full">
                             <textarea id="work_done_input" name="work_done" required rows="4" placeholder="Tasks, bugs fixed, assets created... (Press Enter to submit)" class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 pr-12 text-base text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"></textarea>
-                            
                             <button type="button" id="mic-btn" onclick="startDictation()" class="absolute bottom-3 right-3 text-2xl hover:scale-110 transition-transform bg-white dark:bg-gray-700 rounded-full h-10 w-10 flex items-center justify-center shadow-md border border-gray-200 dark:border-gray-600">
                                 🎤
                             </button>
@@ -239,7 +234,7 @@ async def get_dashboard():
             }}
 
             // ==========================================
-            // BOSS VOICE ASSISTANT (Gujarati Text-to-Speech)
+            // UPGRADED BOSS VOICE ASSISTANT (Natural Human Voice)
             // ==========================================
             async function activateVoiceAssistant() {{
                 const voiceBtn = document.getElementById('voice-assistant-btn');
@@ -249,24 +244,40 @@ async def get_dashboard():
                 voiceBtn.innerHTML = "🔊";
                 voiceBtn.classList.add("animate-pulse");
 
-                // Fetch the clean Gujarati text from the backend
-                const response = await fetch('/api/voice_summary');
-                const data = await response.json();
+                try {{
+                    // 1. Fetch the Gujarati text
+                    const response = await fetch('/api/voice_summary');
+                    const data = await response.json();
 
-                // Browser Native Text-to-Speech configured for Gujarati
-                const synth = window.speechSynthesis;
-                const utterance = new SpeechSynthesisUtterance(data.text);
-                
-                utterance.lang = 'gu-IN'; // Speak in Gujarati!
-                utterance.rate = 0.9;     // Slightly slower for clarity
-                utterance.pitch = 1.0;
-
-                utterance.onend = function() {{
+                    // 2. Encode text and use Google's High-Quality hidden Translation TTS API
+                    const textEncoded = encodeURIComponent(data.text);
+                    const googleTTSUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=gu&q=${{textEncoded}}`;
+                    
+                    // 3. Play the audio directly
+                    const audio = new Audio(googleTTSUrl);
+                    
+                    audio.onended = function() {{
+                        voiceBtn.innerHTML = originalIcon;
+                        voiceBtn.classList.remove("animate-pulse");
+                    }};
+                    
+                    audio.play().catch(e => {{
+                        // Fallback to robotic voice ONLY if browser blocks auto-play
+                        console.log("Audio play blocked, using fallback", e);
+                        const synth = window.speechSynthesis;
+                        const utterance = new SpeechSynthesisUtterance(data.text);
+                        utterance.lang = 'gu-IN';
+                        utterance.onend = function() {{
+                            voiceBtn.innerHTML = originalIcon;
+                            voiceBtn.classList.remove("animate-pulse");
+                        }};
+                        synth.speak(utterance);
+                    }});
+                }} catch (error) {{
+                    console.error("Voice Error:", error);
                     voiceBtn.innerHTML = originalIcon;
                     voiceBtn.classList.remove("animate-pulse");
-                }};
-
-                synth.speak(utterance);
+                }}
             }}
         </script>
         <style>
@@ -346,7 +357,6 @@ async def summarize_logs():
 # ==========================================
 @app.get("/api/voice_summary")
 async def voice_summary():
-    # This route specifically generates plain Gujarati text for the browser to read out loud
     if not submissions_db:
         return {"text": "હજી સુધી કોઈએ કામ જમા કરાવ્યું નથી."} 
     
