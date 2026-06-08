@@ -267,7 +267,7 @@ async def get_dashboard():
                         }});
                     }} else {{
                         // STRICT FAILURE: If API keys are dead, just show a warning icon. No robot voices!
-                        console.error("Sarvam APIs failed. Alerting user to read text.");
+                        console.error("Sarvam API failed. Alerting user to read text.");
                         voiceBtn.innerHTML = "⚠️";
                         voiceBtn.classList.remove("animate-pulse");
                         alert("Voice API credits expired! Please tap 'Summarize' to read the updates below.");
@@ -355,7 +355,7 @@ async def summarize_logs():
 
 
 # ==========================================
-# API ROUTE: SARVAM AI TTS CONNECTION (With Auto-Rotation & NO Fallbacks)
+# API ROUTE: SARVAM AI TTS CONNECTION (Single Key)
 # ==========================================
 @app.get("/api/voice_summary_audio")
 async def voice_summary_audio():
@@ -377,36 +377,22 @@ async def voice_summary_audio():
         "speaker": "ritu" 
     }
     
-    # =========================================================
-    # 3. HIGH-SPEED ROTATION ARRAY (PASTE YOUR FRESH KEYS HERE)
-    # =========================================================
-    api_keys = [
-        "sk_nd2k6k0b_p8DCLdeklhTnkQyXjLbhXMsx", # Your active key
-        "sk_7gnr0k5o_pMJQHwfDM99E0TFiAOPtB0I5", # Exhausted test key
-        # "PASTE_NEW_KEY_3_HERE",
-        # "PASTE_NEW_KEY_4_HERE"
-    ]
+    # JUST YOUR SINGLE ACTIVE KEY
+    headers = {
+        "api-subscription-key": "sk_nd2k6k0b_p8DCLdeklhTnkQyXjLbhXMsx",
+        "Content-Type": "application/json"
+    }
     
-    for key in api_keys:
-        headers = {
-            "api-subscription-key": key,
-            "Content-Type": "application/json"
-        }
-        
-        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
-        
-        try:
-            # STRICT TIMEOUT: 3 seconds max per key.
-            with urllib.request.urlopen(req, timeout=3.0) as response:
-                response_data = json.loads(response.read().decode('utf-8'))
-                audio_base64 = response_data.get("audios", [""])[0]
-                
-                return {"status": "success", "audio_base64": audio_base64}
-                
-        except Exception as e:
-            print(f"Key {key[:10]}... failed: {e}")
-            continue 
-
-    # 4. IF ALL KEYS FAIL: Return a hard error to trigger the frontend alert.
-    print("All Sarvam API keys failed or timed out.")
-    return {"status": "error", "message": "API keys exhausted"}
+    req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
+    
+    try:
+        # BUMPED TIMEOUT TO 8 SECONDS so it doesn't accidentally kill a successful generation!
+        with urllib.request.urlopen(req, timeout=8.0) as response:
+            response_data = json.loads(response.read().decode('utf-8'))
+            audio_base64 = response_data.get("audios", [""])[0]
+            
+            return {"status": "success", "audio_base64": audio_base64}
+            
+    except Exception as e:
+        print(f"Sarvam API failed: {e}")
+        return {"status": "error", "message": "API key exhausted or failed"}
