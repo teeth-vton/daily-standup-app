@@ -377,10 +377,14 @@ async def voice_summary_audio():
         "speaker": "ritu" 
     }
     
-    # 3. HIGH-SPEED ROTATION ARRAY
+    # =========================================================
+    # 3. HIGH-SPEED ROTATION ARRAY (PASTE YOUR FRESH KEYS HERE)
+    # =========================================================
     api_keys = [
-        "sk_7gnr0k5o_pMJQHwfDM99E0TFiAOPtB0I5",
-        "sk_nd2k6k0b_p8DCLdeklhTnkQyXjLbhXMsx"
+        "sk_nd2k6k0b_p8DCLdeklhTnkQyXjLbhXMsx", # Your active key
+        "sk_7gnr0k5o_pMJQHwfDM99E0TFiAOPtB0I5", # Exhausted test key
+        # "PASTE_NEW_KEY_3_HERE",
+        # "PASTE_NEW_KEY_4_HERE"
     ]
     
     for key in api_keys:
@@ -392,7 +396,7 @@ async def voice_summary_audio():
         req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
         
         try:
-            # STRICT TIMEOUT: 3 seconds max.
+            # STRICT TIMEOUT: 3 seconds max per key.
             with urllib.request.urlopen(req, timeout=3.0) as response:
                 response_data = json.loads(response.read().decode('utf-8'))
                 audio_base64 = response_data.get("audios", [""])[0]
