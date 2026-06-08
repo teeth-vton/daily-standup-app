@@ -16,9 +16,9 @@ Natural Voice Reporting: Integration with Sarvam AI for human-like Gujarati voic
 3. Deployment & Maintenance (The "How-To")
 This project is deployed on Vercel using a Python FastAPI runtime.
 
-Repository: []
+Repository: [https://github.com/teeth-vton/daily-standup-app.git]
 
-Live Dashboard: [(https://daily-standup-app.vercel.app/dashboard)]
+Live Dashboard: [https://daily-standup-app.vercel.app/dashboard]
 
 How to update the API Key (When credits expire):
 Navigate to api/index.py in your GitHub repository.
